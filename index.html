@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1f5e8c">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>Kalkulator SAW – Seleksi Beasiswa</title>
+<style>
+:root{--bg:#f4f6f8;--surf:#fff;--ink:#16222e;--mut:#5b6b7a;--line:#d5dce3;--acc:#1f5e8c;--accsoft:#dbe9f3;--bar:#a9bccb;--warn:#a4410f;color-scheme:light;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0f161d;--surf:#17212b;--ink:#e6ecf1;--mut:#93a3b3;--line:#2b3946;--acc:#5fa8d8;--accsoft:#1c3445;--bar:#3a5063;--warn:#f0a070;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0f161d;--surf:#17212b;--ink:#e6ecf1;--mut:#93a3b3;--line:#2b3946;--acc:#5fa8d8;--accsoft:#1c3445;--bar:#3a5063;--warn:#f0a070;color-scheme:dark}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*,*::before,*::after{box-sizing:inherit}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 "Public Sans",system-ui,-apple-system,"Segoe UI",sans-serif}
+main{max-width:980px;margin:0 auto;padding:24px 16px 48px}
+h1{font:600 28px/1.2 "Newsreader",Georgia,"Times New Roman",serif;margin:0 0 6px}
+h2{font:600 20px/1.3 "Newsreader",Georgia,serif;margin:0 0 4px}
+p.lead{color:var(--mut);margin:0 0 24px;max-width:62ch}
+section{background:var(--surf);border:1px solid var(--line);border-radius:10px;padding:18px;margin-bottom:18px}
+.sub{color:var(--mut);font-size:13px;margin:0 0 12px}
+.scroll{overflow-x:auto}
+table{border-collapse:collapse;width:100%;min-width:560px}
+th,td{padding:6px 6px;text-align:left;border-bottom:1px solid var(--line);font-size:14px}
+th{font-weight:600;color:var(--mut);font-size:13px}
+td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
+input,select{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:5px 7px;width:100%;min-width:0}
+input[type=number]{text-align:right}
+input:focus-visible,select:focus-visible,button:focus-visible,summary:focus-visible{outline:2px solid var(--acc);outline-offset:1px}
+button{font:inherit;cursor:pointer;border-radius:6px;border:1px solid var(--line);background:var(--surf);color:var(--ink);padding:6px 11px}
+button.pri{background:var(--acc);border-color:var(--acc);color:#fff}
+button.x{border:0;background:none;color:var(--mut);padding:4px 8px;font-size:16px}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:12px}
+.status{font-size:13px}.bad{color:var(--warn);font-weight:600}
+.rank{display:grid;grid-template-columns:34px minmax(70px,150px) 1fr 70px;gap:10px;align-items:center;padding:7px 0;border-bottom:1px solid var(--line)}
+.rank .no{font:600 18px "Newsreader",Georgia,serif;color:var(--mut)}
+.rank .track{height:12px;background:var(--accsoft);border-radius:6px;overflow:hidden}
+.rank .fill{height:100%;background:var(--bar);border-radius:6px}
+.rank.top .no{color:var(--acc)}.rank.top .fill{background:var(--acc)}.rank.top .nm{font-weight:600}
+.rank .v{text-align:right;font-variant-numeric:tabular-nums}
+.verdict{background:var(--accsoft);border-radius:8px;padding:12px 14px;margin-bottom:10px}
+details{margin-top:14px}summary{cursor:pointer;font-weight:600}
+.ref{color:var(--mut);font-size:13px;margin:8px 0}
+.theme{float:right}
+@media (max-width:560px){.rank{grid-template-columns:28px 1fr 64px}.rank .track{grid-column:1/-1;order:5}}
+</style>
+</head>
+<body>
+<main>
+<button class="theme" id="theme" aria-label="Ganti tema terang atau gelap">Tema</button>
+<h1>Kalkulator SAW untuk Seleksi Beasiswa</h1>
+<p class="lead">Ubah kriteria, bobot, dan nilai calon penerima. Peringkat dihitung ulang dengan metode Simple Additive Weighting setiap kali ada perubahan. Data awal adalah contoh fiktif.</p>
+
+<section>
+<h2>Kriteria dan bobot</h2>
+<p class="sub">Benefit: makin besar makin baik. Cost: makin kecil makin baik.</p>
+<div class="scroll"><table id="ct"></table></div>
+<div class="row">
+<button id="addc">Tambah kriteria</button>
+<button id="norm">Jadikan total bobot 1</button>
+<span class="status" id="wsum"></span>
+</div>
+</section>
+
+<section>
+<h2>Calon penerima</h2>
+<p class="sub">Isi nilai tiap kriteria. Nilai pada kriteria cost harus lebih dari 0.</p>
+<div class="scroll"><table id="at"></table></div>
+<div class="row"><button id="adda">Tambah calon</button><button id="reset">Kembalikan data contoh</button></div>
+</section>
+
+<section>
+<h2>Hasil perankingan</h2>
+<div id="msg"></div>
+<div id="rank"></div>
+<details><summary>Lihat langkah perhitungan</summary>
+<p class="ref">Normalisasi: benefit r = x / max, cost r = min / x. Nilai akhir: V = Σ (bobot × r).</p>
+<div class="scroll"><table id="nt"></table></div>
+<p class="ref">Bobot × r dan nilai akhir</p>
+<div class="scroll"><table id="vt"></table></div>
+</details>
+</section>
+</main>
+
+<script>
+const SAMPLE = () => ({
+  c: [{n:'IPK',t:'Benefit',w:.30},{n:'Penghasilan orang tua (juta/bulan)',t:'Cost',w:.25},{n:'Prestasi non-akademik (1–5)',t:'Benefit',w:.20},{n:'Jumlah tanggungan',t:'Benefit',w:.15},{n:'Keaktifan organisasi (1–5)',t:'Benefit',w:.10}],
+  a: [['Andi',3.85,3.0,4,3,4],['Bella',3.70,2.5,5,4,3],['Citra',3.90,5.0,3,2,5],['Dimas',3.60,2.0,3,5,4],['Eka',3.75,4.0,4,3,3],['Fajar',3.50,1.5,2,4,2]].map(r=>({n:r[0],x:r.slice(1)}))
+});
+let S = SAMPLE();
+const $ = id => document.getElementById(id);
+const f4 = v => v.toFixed(4).replace('.', ',');
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+function inputs() {
+  $('ct').innerHTML = '<tr><th>Kode</th><th>Nama kriteria</th><th>Jenis</th><th class="n">Bobot</th><th></th></tr>' +
+    S.c.map((c,j) => `<tr><td>C${j+1}</td><td><input data-c="${j}" data-f="n" value="${esc(c.n)}" aria-label="Nama C${j+1}"></td>
+    <td><select data-c="${j}" data-f="t" aria-label="Jenis C${j+1}"><option${c.t=='Benefit'?' selected':''}>Benefit</option><option${c.t=='Cost'?' selected':''}>Cost</option></select></td>
+    <td><input type="number" step="0.01" min="0" data-c="${j}" data-f="w" value="${c.w}" aria-label="Bobot C${j+1}"></td>
+    <td><button class="x" data-dc="${j}" aria-label="Hapus C${j+1}" ${S.c.length<3?'disabled':''}>×</button></td></tr>`).join('');
+  $('at').innerHTML = '<tr><th>Nama</th>' + S.c.map((c,j)=>`<th class="n">C${j+1}</th>`).join('') + '<th></th></tr>' +
+    S.a.map((a,i) => `<tr><td><input data-a="${i}" data-f="n" value="${esc(a.n)}" aria-label="Nama calon ${i+1}"></td>` +
+    S.c.map((c,j)=>`<td><input type="number" step="any" data-a="${i}" data-x="${j}" value="${a.x[j]??''}" aria-label="${esc(a.n)} C${j+1}"></td>`).join('') +
+    `<td><button class="x" data-da="${i}" aria-label="Hapus calon ${i+1}" ${S.a.length<3?'disabled':''}>×</button></td></tr>`).join('');
+}
+
+function calc() {
+  const w = S.c.map(c => +c.w || 0), sum = w.reduce((p,q)=>p+q,0), ok = Math.abs(sum-1) < 5e-4;
+  $('wsum').innerHTML = `Total bobot: ${sum.toFixed(2).replace('.',',')} ` + (ok ? '(sudah 1)' : '<span class="bad">(seharusnya 1)</span>');
+  const X = S.a.map(a => S.c.map((c,j) => +a.x[j] || 0));
+  const ref = S.c.map((c,j) => { const col = X.map(r=>r[j]); return c.t=='Benefit' ? Math.max(...col) : Math.min(...col); });
+  let bad = false;
+  const R = X.map(r => r.map((x,j) => {
+    if (S.c[j].t=='Benefit') return ref[j] > 0 ? x/ref[j] : 0;
+    if (x <= 0) { bad = true; return 0; } return ref[j]/x; }));
+  const WR = R.map(r => r.map((v,j)=>v*w[j])), V = WR.map(r=>r.reduce((p,q)=>p+q,0));
+  const ord = V.map((v,i)=>i).sort((p,q)=>V[q]-V[p]), max = Math.max(...V) || 1;
+  $('msg').innerHTML = (bad ? '<p class="bad">Ada nilai cost yang 0 atau kosong. Nilai tersebut diberi rating 0.</p>' : '') +
+    (ok ? '' : '<p class="bad">Total bobot belum 1. Gunakan tombol “Jadikan total bobot 1” agar hasil sesuai metode.</p>') +
+    `<div class="verdict"><b>${esc(S.a[ord[0]].n)}</b> menempati peringkat 1 dengan nilai ${f4(V[ord[0]])}` +
+    (ord.length>1 ? `, selisih ${f4(V[ord[0]]-V[ord[1]])} dari ${esc(S.a[ord[1]].n)}.` : '.') + '</div>';
+  $('rank').innerHTML = ord.map((i,k) => `<div class="rank${k==0?' top':''}"><span class="no">${k+1}</span><span class="nm">${esc(S.a[i].n)}</span>
+    <span class="track"><span class="fill" style="display:block;width:${(V[i]/max*100).toFixed(1)}%"></span></span><span class="v">${f4(V[i])}</span></div>`).join('');
+  const hd = S.c.map((c,j)=>`<th class="n">C${j+1}</th>`).join('');
+  $('nt').innerHTML = `<tr><th>Nama</th>${hd}</tr>` + S.a.map((a,i)=>`<tr><td>${esc(a.n)}</td>${R[i].map(v=>`<td class="n">${f4(v)}</td>`).join('')}</tr>`).join('');
+  $('vt').innerHTML = `<tr><th>Nama</th>${hd}<th class="n">V</th></tr>` + S.a.map((a,i)=>`<tr><td>${esc(a.n)}</td>${WR[i].map(v=>`<td class="n">${f4(v)}</td>`).join('')}<td class="n"><b>${f4(V[i])}</b></td></tr>`).join('');
+}
+
+document.addEventListener('input', e => {
+  const t = e.target;
+  if (t.dataset.c !== undefined) S.c[t.dataset.c][t.dataset.f] = t.dataset.f=='w' ? parseFloat(t.value) || 0 : t.value;
+  else if (t.dataset.a !== undefined) { const a = S.a[t.dataset.a]; if (t.dataset.x !== undefined) a.x[t.dataset.x] = t.value === '' ? '' : parseFloat(t.value); else a.n = t.value; }
+  else return;
+  calc();
+});
+document.addEventListener('click', e => {
+  const t = e.target;
+  if (t.dataset.dc !== undefined) { const j = +t.dataset.dc; S.c.splice(j,1); S.a.forEach(a=>a.x.splice(j,1)); }
+  else if (t.dataset.da !== undefined) S.a.splice(+t.dataset.da,1);
+  else if (t.id=='addc') { S.c.push({n:'Kriteria baru',t:'Benefit',w:0}); S.a.forEach(a=>a.x.push(0)); }
+  else if (t.id=='adda') S.a.push({n:'Calon '+(S.a.length+1),x:S.c.map(()=>0)});
+  else if (t.id=='norm') { const s = S.c.reduce((p,c)=>p+(+c.w||0),0); if (s>0) S.c.forEach(c=>c.w = Math.round(c.w/s*10000)/10000); }
+  else if (t.id=='reset') S = SAMPLE();
+  else return;
+  inputs(); calc();
+});
+$('theme').onclick = () => {
+  const r = document.documentElement, dark = getComputedStyle(r).colorScheme == 'dark';
+  r.dataset.theme = dark ? 'light' : 'dark';
+};
+inputs(); calc();
+if ('serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('sw.js').catch(()=>{});
+</script>
+</body>
+</html>
